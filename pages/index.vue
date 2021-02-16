@@ -1,45 +1,49 @@
 <template>
   <div>
-    <s-welcome/>
-    <s-why/>
-    <s-modes/>
-    <s-codesandbox/>
-    <s-backers/>
-    <nuxt-footer/>
+    <HomeWelcome />
+    <HomeWhy />
+    <HomeCompanies />
+    <HomeModes />
+    <HomeSponsors />
   </div>
 </template>
 
 <script>
-import sWelcome from '@/partials/home/welcome'
-import sWhy from '@/partials/home/why'
-
 export default {
-  components: {
-    sWelcome,
-    sWhy,
-    sModes: () => import('@/partials/home/modes'),
-    sCodesandbox: () => import('@/partials/home/codesandbox'),
-    sBackers: () => import('@/partials/home/backers'),
-    NuxtFooter: () => import('@/components/Footer.vue')
-  },
   head() {
+    const title = this.$i18n.t('homepage.meta.title')
+    const description = this.$i18n.t('homepage.meta.description')
+
     return {
-      title: this.$store.state.lang.homepage.meta.title,
+      title,
       meta: [
-        { name: 'description', hid: 'description', content: this.$store.state.lang.homepage.meta.description },
+        {
+          hid: 'description',
+          name: 'description',
+          content: description
+        },
         // Open Graph
-        { name: 'og:title', content: this.$store.state.lang.homepage.meta.title },
-        { name: 'og:description', content: this.$store.state.lang.homepage.meta.description },
-        { name: 'og:type', content: 'website' },
-        { name: 'og:url', content: 'https://nuxtjs.org' },
-        { name: 'og:image', content: 'https://nuxtjs.org/meta_640.png' },
+        {
+          hid: 'og:title',
+          property: 'og:title',
+          content: title
+        },
+        {
+          hid: 'og:description',
+          property: 'og:description',
+          content: description
+        },
         // Twitter Card
-        { name: 'twitter:card', content: 'summary' },
-        { name: 'twitter:site', content: '@nuxt_js' },
-        { name: 'twitter:title', content: this.$store.state.lang.homepage.meta.title },
-        { name: 'twitter:description', content: this.$store.state.lang.homepage.meta.description },
-        { name: 'twitter:image', content: 'https://nuxtjs.org/meta_640.png' },
-        { name: 'twitter:image:alt', content: 'Nuxt.js Logo' }
+        {
+          hid: 'twitter:title',
+          name: 'twitter:title',
+          content: title
+        },
+        {
+          hid: 'twitter:description',
+          name: 'twitter:description',
+          content: description
+        }
       ]
     }
   }

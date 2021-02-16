@@ -6,10 +6,10 @@ export default {
   },
   mounted() {
     if (!window.IntersectionObserver) {
-      return console.warn('IntersectionObserver polyfill is required.')
+      return console.warn('IntersectionObserver polyfill is required.') // eslint-disable-line no-console
     }
 
-    this.__observer = new window.IntersectionObserver((entries) => {
+    this.__observer = new window.IntersectionObserver(entries => {
       entries.forEach(({ intersectionRatio, target: el }) => {
         if (intersectionRatio > 0) {
           this.isIntersecting = true

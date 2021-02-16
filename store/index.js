@@ -1,39 +1,22 @@
-import Vuex from 'vuex'
+const isProd = process.env.CONTEXT === 'production'
+const isTest = Boolean(process.env.DEPLOY_PRIME_URL && !isProd)
 
 export const state = () => ({
+  host:
+    (isProd ? process.env.URL : process.env.DEPLOY_PRIME_URL) ||
+    'http://localhost:3000',
+  isProd,
+  isTest,
+  isDev: !isProd && !isTest,
   filled: false,
-  docVersion: '',
-  ghVersion: '',
-  visibleHeader: false,
   visibleAffix: false,
-  apiURI: 'https://docs.api.nuxtjs.org',
-  locale: 'en',
-  lang: {},
-  menu: {},
-  adBlocked: false
+  adBlocked: false,
+  focusMode: false
 })
 
 export const mutations = {
   toggle(state, key) {
     state[key] = !state[key]
-  },
-  setApiURI(state, apiURI) {
-    state.apiURI = apiURI
-  },
-  setDocVersion(state, docVersion) {
-    state.docVersion = docVersion
-  },
-  setGhVersion(state, ghVersion) {
-    state.ghVersion = ghVersion
-  },
-  setLocale(state, locale) {
-    state.locale = locale
-  },
-  setLang(state, lang) {
-    state.lang = lang
-  },
-  setMenu(state, menu) {
-    state.menu = menu
   },
   setFilled(state) {
     state.filled = true

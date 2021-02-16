@@ -1,27 +1,45 @@
 <template>
-  <div class="category">
-    <nuxt-affix :list="list" category="examples" />
-    <div class="category__content Content Content--hasCarbon" :class="{'category__content--hidden': visible}">
-      <nuxt-child/>
-    </div>
-    <div class="category__footer">
-      <nuxt-footer/>
+  <div class="shadow-nuxt">
+    <div class="container mx-auto px-4 lg:flex pb-12">
+      <TheMobileAsideNav :links="links" section="examples" />
+      <TheAsideNav :links="links" section="examples" class="hidden lg:block" />
+      <div class="w-full lg:static lg:max-h-full lg:overflow-visible lg:w-3/4">
+        <nuxt-child />
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-import NuxtAffix from '~/components/Affix.vue'
-import NuxtFooter from '~/components/Footer.vue'
+import groupBy from 'lodash.groupby'
 
 export default {
-  computed: {
-    visible() { return this.$store.state.visibleAffix },
-    list() { return this.$store.state.menu.examples }
-  },
-  components: {
-    NuxtAffix,
-    NuxtFooter
+  async asyncData({ $content, app }) {
+    let pages = []
+
+    try {
+      pages = await $content(app.i18n.defaultLocale, 'examples')
+        .only(['slug', 'title', 'position', 'menu', 'category'])
+        .sortBy('position')
+        .fetch()
+
+      if (app.i18n.locale !== app.i18n.defaultLocale) {
+        const newPages = await $content(app.i18n.locale, 'examples')
+          .only(['slug', 'title', 'position', 'menu', 'category'])
+          .sortBy('position')
+          .fetch()
+
+        pages = pages.map(page => {
+          const newPage = newPages.find(newPage => newPage.slug === page.slug)
+
+          return newPage || page
+        })
+      }
+    } catch (e) {}
+
+    return {
+      links: groupBy(pages, 'category')
+    }
   }
 }
 </script>

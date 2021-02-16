@@ -1,62 +1,122 @@
 <template>
-  <div>
-    <code-fund-ads :key="$route.params.slug" />
-    <html-parser :content="body" />
-    <contribute :doc-link="docLink" />
+  <div class="-mx-4 lg:mx-0 flex flex-col-reverse lg:flex-row">
+    <div
+      class="w-full py-8 px-4 lg:static lg:overflow-visible lg:max-h-full lg:w-3/4"
+    >
+      <article>
+        <h1
+          class="text-light-onSurfacePrimary dark:text-dark-onSurfacePrimary transition-colors duration-300 ease-linear"
+        >
+          {{ page.title }}
+        </h1>
+        <AppResponsiveVideo v-if="page.youtube" :src="page.youtube" />
+        <nuxt-content :document="page" />
+        <AppContribute :doc-link="docLink" :contributors="contributors" />
+      </article>
+    </div>
+    <AffixBlock>
+      <SponsorsBlock />
+      <AdsBlock :key="$route.params.slug" />
+    </AffixBlock>
   </div>
 </template>
 
 <script>
-import axios from 'axios'
-import CodeFundAds from '~/components/CodeFundAds.vue'
-import HtmlParser from '~/components/HtmlParser.vue'
-import Contribute from '~/components/Contribute.vue'
-
 export default {
-  async asyncData({ route, store, error }) {
-    // Default data
-    let data = {
-      attrs: {},
-      body: '',
-      docLink: ''
-    }
-    const slug = route.params.slug || 'external-resources'
-    const path = `/${store.state.lang.iso}/faq/${slug}`
-    let res
-    try {
-      res = await axios.get(store.state.apiURI + path)
-    } catch (err) {
-      if (err.response.status !== 404) {
-        return error({ statusCode: 500, message: store.state.lang.text.an_error_occured })
-      }
-      return error({ statusCode: 404, message: store.state.lang.text.api_page_not_found })
-    }
-    data.attrs = res.data.attrs
-    data.body = res.data.body
-    data.docLink = `https://github.com/nuxt/docs/blob/master${path}.md`
-    if (store.state.lang.iso === 'ru') {
-      data.docLink = `https://github.com/translation-gang/ru.docs.nuxtjs/blob/translation-ru${path}.md`
-    } else if (store.state.lang.iso === 'cn') {
-      data.docLink = `https://github.com/o2team/i18n-cn-nuxtjs-docs/blob/dev${path}.md`
-    }
-    if (!data.attrs.title) console.error(`[${path}] ${store.state.lang.text.please_define_title}.`) // eslint-disable-line no-console
-    if (!data.attrs.description) console.error(`[${path}] ${store.state.lang.text.please_define_description}.`) // eslint-disable-line no-console
-    return data
-  },
   scrollToTop: true,
+  async asyncData({ $content, $contributors, params, store, error, app }) {
+    const slug = params.slug || 'auth-routes'
+
+    let path = `/${app.i18n.defaultLocale}/faq`
+    let page, prev, next, langFallback
+
+    try {
+      page = await $content(path, slug).fetch()
+    } catch (err) {
+      return error({
+        statusCode: 404,
+        message: app.i18n.t('common.page_not_found')
+      })
+    }
+
+    if (app.i18n.defaultLocale !== app.i18n.locale) {
+      try {
+        path = `/${app.i18n.locale}/faq`
+        page = await $content(path, slug).fetch()
+      } catch (err) {
+        langFallback = true
+        path = `/${app.i18n.defaultLocale}/faq`
+      }
+    }
+
+    const contributors = await $contributors(`/content${path}/${slug}`)
+
+    try {
+      ;[prev, next] = await $content(path)
+        .only(['title', 'slug', 'dir'])
+        .sortBy('position')
+        .surround(slug, { before: 1, after: 1 })
+        .fetch()
+    } catch (e) {}
+
+    return {
+      langFallback,
+      path,
+      section: params.section,
+      page,
+      prev,
+      next,
+      contributors
+    }
+  },
   head() {
     return {
-      title: this.attrs.title,
-      titleTemplate: '%s - Nuxt.js',
+      title: this.page.title,
+      titleTemplate: '%s - NuxtJS',
       meta: [
-        { hid: 'description', name: 'description', content: this.attrs.description }
+        {
+          hid: 'description',
+          name: 'description',
+          content: this.page.description
+        },
+        // Open Graph
+        { hid: 'og:title', property: 'og:title', content: this.page.title },
+        {
+          hid: 'og:description',
+          property: 'og:description',
+          content: this.page.description
+        },
+        // Twitter Card
+        {
+          hid: 'twitter:title',
+          name: 'twitter:title',
+          content: this.page.title
+        },
+        {
+          hid: 'twitter:description',
+          name: 'twitter:description',
+          content: this.page.description
+        }
       ]
     }
   },
-  components: {
-    CodeFundAds,
-    HtmlParser,
-    Contribute
+  computed: {
+    docLink() {
+      return `https://github.com/nuxt/nuxtjs.org/blob/master/content${this.path}.md`
+    }
   }
 }
 </script>
+
+<style lang="scss" scoped>
+article h1 {
+  @apply font-medium relative text-3xl table mb-8;
+
+  &::after {
+    content: ' ';
+    width: 80%;
+
+    @apply block border-2 border-nuxt-lightgreen mt-2 mb-1 rounded;
+  }
+}
+</style>

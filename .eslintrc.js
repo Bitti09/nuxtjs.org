@@ -1,37 +1,22 @@
 module.exports = {
   root: true,
-  parser: 'babel-eslint',
   parserOptions: {
-    sourceType: 'module'
+    parser: 'babel-eslint',
+    sourceType: 'module',
+    ecmaVersion: 2020
   },
-  env: {
-    browser: true,
-    node: true
-  },
-  extends: 'standard',
-  // required to lint *.vue files
-  plugins: [
-    'html'
-  ],
-  // add your custom rules here
+  extends: ['@nuxtjs', 'eslint-config-prettier'],
   rules: {
-    // allow paren-less arrow functions
-    'arrow-parens': 0,
-    // allow async-await
-    'generator-star-spacing': 0,
-    // allow debugger during development
-    'no-debugger': process.env.NODE_ENV === 'production' ? 2 : 0,
-    // do not allow console.logs etc...
-    'no-console': 2,
-    'space-before-function-paren': [
-			2,
-			{
-				"anonymous": "always",
-				"named": "never"
-			}
-		]
-  },
-  globals: {
-    'Promise': true
+    // Only allow console log and debugger in development
+    'no-debugger': process.env.PRE_COMMIT ? 'error' : 'off',
+    'no-console': process.env.PRE_COMMIT
+      ? ['error', { allow: ['warn', 'error'] }]
+      : 'off',
+
+    // Prettier adds slash at end and so we need to turn this off or it will conflict
+    'vue/html-self-closing': 'off',
+
+    // Prettier has an indent already set so this conflicts with it
+    'vue/html-indent': 'off'
   }
 }

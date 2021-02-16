@@ -1,115 +1,144 @@
 <template>
-  <div>
-    <code-fund-ads :key="$route.params.slug" />
-    <h1>{{ attrs.title }}</h1>
-    <blockquote>
-      <p>{{ attrs.description }}</p>
-    </blockquote>
-    <responsive-video v-if="attrs.youtube" :src="attrs.youtube"/>
-    <h2>{{ $store.state.lang.examples.source_code }}</h2>
-    <code-sandbox :src="codeSandBoxLink" style="margin-bottom: 20px;"/>
-    <div>
-      <a :href="liveEditLink" class="button button--grey" target="_blank" rel="noopener">
-        <span>
-          <div class="icon edit"></div>
-        </span>
-        {{ $store.state.lang.links.live_edit }}
-      </a>
-      <a :href="downloadLink" class="button button--grey" target="_blank" rel="noopener">
-        <span>
-          <div class="icon download"></div>
-        </span>
-        {{ $store.state.lang.links.download }}
-      </a>
-      <nuxt-link v-if="attrs.documentation" :to="attrs.documentation" class="button button--grey">
-        {{ $store.state.lang.links.documentation }}
-      </nuxt-link>
+  <div class="-mx-4 lg:mx-0 flex flex-col-reverse lg:flex-row">
+    <div
+      class="lg:min-h-screen lg:w-4/4 w-full py-8 px-4 lg:static lg:overflow-visible lg:max-h-full"
+    >
+      <LangFallback :doc-link="docLink" :lang-fallback="langFallback" />
+
+      <article>
+        <h1
+          class="text-light-onSurfacePrimary dark:text-dark-onSurfacePrimary transition-colors duration-300 ease-linear"
+        >
+          {{ page.title }}
+        </h1>
+        <nuxt-content :document="page" />
+
+        <AppPrevNextNew
+          :prev="prev"
+          :next="next"
+          section="examples"
+          class="mt-4"
+        />
+        <AppContribute :doc-link="docLink" :contributors="contributors" />
+      </article>
     </div>
-    <html-parser :content="body" />
   </div>
 </template>
 
 <script>
-import axios from 'axios'
-import ResponsiveVideo from '~/components/ResponsiveVideo.vue'
-import CodeSandbox from '~/components/CodeSandbox.vue'
-import CodeFundAds from '~/components/CodeFundAds.vue'
-import HtmlParser from '~/components/HtmlParser.vue'
-
 export default {
-  watch: {
-    '$route.params.slug': function () {
-      this.attrs.github = ''
-    }
-  },
-  async asyncData({ route, store, error }) {
-    // Default data
-    let data = {
-      attrs: {},
-      body: ''
-    }
-    let slug = route.params.slug || 'hello-world'
-    const path = `/${store.state.lang.iso}/examples/${slug}`
-    let res
-    try {
-      res = await axios.get(store.state.apiURI + path)
-    } catch (err) {
-      if (err.response.status !== 404) {
-        return error({ statusCode: 500, message: store.state.lang.text.an_error_occured })
-      }
-      return error({ statusCode: 404, message: store.state.lang.text.api_page_not_found })
-    }
-    data.attrs = res.data.attrs
-    data.body = res.data.body
-    if (!data.attrs.title) console.error(`[${path}] ${store.state.lang.text.please_define_title}.`) // eslint-disable-line no-console
-    if (!data.attrs.description) console.error(`[${path}] ${store.state.lang.text.please_define_description}.`) // eslint-disable-line no-console
-
-    return data
-  },
-  computed: {
-    codeSandBox() {
-      return `https://codesandbox.io`
-    },
-    codeSandBoxLink() {
-      if (!this.attrs.github) {
-        return ''
-      }
-      return `${this.codeSandBox}/embed/github/nuxt/nuxt.js/tree/dev/examples/${this.attrs.github}?autoresize=1&view=editor`
-    },
-    liveEditLink() {
-      return `${this.codeSandBox}/s/github/nuxt/nuxt.js/tree/dev/examples/${this.attrs.github}?from-embed`
-    },
-    downloadLink() {
-      return 'https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/nuxt/nuxt.js/tree/dev/examples/' + this.attrs.github
-    }
-  },
   scrollToTop: true,
+  async asyncData({ $content, $contributors, params, store, error, app }) {
+    const slug = params.slug || 'hello-world'
+
+    let path = `/${app.i18n.defaultLocale}/examples`
+    let page, prev, next, langFallback
+
+    try {
+      page = await $content(path, slug).fetch()
+    } catch (err) {
+      if (!err.response || err.response.status !== 404) {
+        return error({
+          statusCode: 500,
+          message: app.i18n.t('common.an_error_occurred')
+        })
+      }
+
+      return error({
+        statusCode: 404,
+        message: app.i18n.t('common.page_not_found')
+      })
+    }
+
+    if (
+      app.i18n.locale !== app.i18n.defaultLocale &&
+      (['pt', 'es', 'zh'].includes(app.i18n.locale) ||
+        process.env.NODE_ENV !== 'production')
+    ) {
+      try {
+        path = `/${app.i18n.locale}/examples`
+        page = await $content(path, params.slug || 'hello-world').fetch()
+      } catch (err) {
+        langFallback = true
+        path = `/${app.i18n.defaultLocale}/examples`
+      }
+    }
+
+    const contributors = await $contributors(`/content${path}/${slug}`)
+
+    try {
+      ;[prev, next] = await $content(
+        ['pt', 'es', 'zh'].includes(app.i18n.locale)
+          ? path
+          : `/${app.i18n.defaultLocale}/examples/`
+      )
+        .only(['title', 'slug', 'dir', 'menu'])
+        .sortBy('position')
+        .sortBy('title')
+        .sortBy('menu')
+        .surround(params.slug, { before: 1, after: 1 })
+        .fetch()
+    } catch (e) {}
+
+    return {
+      path,
+      showModal: false,
+      langFallback,
+      section: params.section,
+      book: params.book,
+      page,
+      prev,
+      next,
+      contributors
+    }
+  },
   head() {
     return {
-      title: this.attrs.title,
-      titleTemplate: '%s - Nuxt.js',
+      title: this.page.title,
+      titleTemplate: '%s - NuxtJS',
       meta: [
-        { hid: 'description', name: 'description', content: this.attrs.description }
+        {
+          hid: 'description',
+          name: 'description',
+          content: this.page.description
+        },
+        // Open Graph
+        { hid: 'og:title', property: 'og:title', content: this.page.title },
+        {
+          hid: 'og:description',
+          property: 'og:description',
+          content: this.page.description
+        },
+        // Twitter Card
+        {
+          hid: 'twitter:title',
+          name: 'twitter:title',
+          content: this.page.title
+        },
+        {
+          hid: 'twitter:description',
+          name: 'twitter:description',
+          content: this.page.description
+        }
       ]
     }
   },
-  components: {
-    ResponsiveVideo,
-    CodeSandbox,
-    CodeFundAds,
-    HtmlParser
+  computed: {
+    docLink() {
+      return `https://github.com/nuxt/nuxtjs.org/blob/master/content${this.path}/${this.$route.params.slug}.md`
+    }
   }
 }
 </script>
-
 <style lang="scss" scoped>
-.button {
-  margin-bottom: 15px;
-  margin-right: 15px;
-  .icon,
-  .icon:before,
-  .icon:after {
-    color: #fff;
+article h1 {
+  @apply font-medium relative text-3xl table mb-8;
+
+  &::after {
+    content: ' ';
+    width: 80%;
+
+    @apply block border-2 border-nuxt-lightgreen mt-2 mb-1 rounded;
   }
 }
 </style>
